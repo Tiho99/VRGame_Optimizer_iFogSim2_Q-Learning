@@ -1,0 +1,26 @@
+{
+  "devices": [
+    {"id":3,"name":"cloud","level":0,"parentId":-1,"energy":1216547.475},
+    {"id":4,"name":"proxy-server","level":1,"parentId":3,"energy":75089.97},
+    {"id":5,"name":"d-0","level":1,"parentId":4,"energy":89540.60124100013},
+    {"id":6,"name":"m-0-0","level":3,"parentId":5,"energy":86554.27161999974},
+    {"id":9,"name":"m-0-1","level":3,"parentId":5,"energy":74196.0},
+    {"id":12,"name":"m-0-2","level":3,"parentId":5,"energy":74196.0},
+    {"id":15,"name":"m-0-3","level":3,"parentId":5,"energy":74196.0},
+    {"id":18,"name":"m-0-4","level":3,"parentId":5,"energy":74196.0},
+    {"id":21,"name":"d-1","level":1,"parentId":4,"energy":75089.97},
+    {"id":22,"name":"m-1-0","level":3,"parentId":21,"energy":74196.0},
+    {"id":25,"name":"m-1-1","level":3,"parentId":21,"energy":74196.0},
+    {"id":28,"name":"m-1-2","level":3,"parentId":21,"energy":74196.0},
+    {"id":31,"name":"m-1-3","level":3,"parentId":21,"energy":74196.0},
+    {"id":34,"name":"m-1-4","level":3,"parentId":21,"energy":74196.0}
+  ],
+  "placements": [
+    {"module":"connector","device":"cloud"},
+    {"module":"concentration_calculator","device":"d-0"},
+    {"module":"client","device":"m-0-0"}
+  ],
+  "baseline_latency": 229.33,
+  "optimized_latency": 19.13551552795028
+  ,"gain_percent": 91.65590392536943
+}

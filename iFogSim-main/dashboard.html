@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iFogSim Dashboard – VR Game Optimization</title>
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #07090f;
+    color: #e2e8f0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 24px;
+  }
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: #0d1120;
+    border-radius: 20px;
+    border: 1px solid #252d48;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  header {
+    padding: 20px 28px;
+    border-bottom: 1px solid #252d48;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0a0e1a;
+  }
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
+    color: #00d4ff;
+    letter-spacing: -0.5px;
+  }
+  .badge {
+    background: #1c2440;
+    padding: 5px 12px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    color: #94a3b8;
+  }
+  .tabs {
+    display: flex;
+    background: #0d1120;
+    border-bottom: 1px solid #252d48;
+    padding: 0 20px;
+  }
+  .tab {
+    padding: 12px 24px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    color: #94a3b8;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    color: #00d4ff;
+    border-bottom-color: #00d4ff;
+  }
+  .tab-pane {
+    display: none;
+    padding: 28px;
+    animation: fade 0.3s ease;
+  }
+  .tab-pane.active { display: block; }
+  @keyframes fade { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+
+  /* Cartes métriques */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+  .metric-card {
+    background: #161c2e;
+    border: 1px solid #252d48;
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #3b82f6;
+  }
+  .metric-card.green::before { background: #10b981; }
+  .metric-card.amber::before { background: #f59e0b; }
+  .metric-card.purple::before { background: #8b5cf6; }
+  .metric-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+  .metric-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .metric-sub {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-top: 8px;
+  }
+  .progress-bar {
+    margin-top: 16px;
+    background: #1e293b;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #f59e0b;
+    border-radius: 10px;
+    transition: width 1s ease;
+  }
+
+  /* Topologie canvas */
+  .topo-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+  }
+  #cy {
+    background: #0d1120;
+    border: 1px solid #252d48;
+    border-radius: 16px;
+    height: 550px;
+  }
+  .legend-panel {
+    background: #161c2e;
+    border: 1px solid #252d48;
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+  }
+  .legend-text {
+    font-size: 0.8rem;
+  }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #252d48;
+    font-size: 0.8rem;
+  }
+
+  /* Tableaux */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid #252d48;
+  }
+  th {
+    font-family: 'Space Mono', monospace;
+    font-weight: 400;
+    color: #94a3b8;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+  }
+  .badge-device {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .cloud-badge { background: #1e3a6e; color: #93c5fd; }
+  .fog-badge   { background: #0d2a22; color: #6ee7b7; }
+  .edge-badge  { background: #2d1f00; color: #fcd34d; }
+
+  /* Energy bars */
+  .energy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px,1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .energy-card {
+    background: #161c2e;
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid #252d48;
+  }
+  .energy-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    margin-bottom: 8px;
+    color: #94a3b8;
+  }
+  .energy-bar-container {
+    background: #1e293b;
+    border-radius: 6px;
+    height: 24px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .energy-bar {
+    height: 100%;
+    width: 0%;
+    background: #10b981;
+    transition: width 1s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    font-size: 0.7rem;
+    font-family: monospace;
+    color: #000;
+  }
+  .code-block {
+    background: #0a0e1a;
+    border-radius: 16px;
+    padding: 20px;
+    overflow-x: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    border: 1px solid #252d48;
+  }
+  .loading { text-align: center; padding: 60px; color: #94a3b8; }
+  .error { color: #ef4444; text-align: center; padding: 40px; }
+  footer { text-align: center; padding: 20px; font-size: 0.7rem; color: #475569; border-top: 1px solid #252d48; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⚡ iFogSim – VR Game Optimization</h1>
+    <div class="badge">Q‑Learning | Latency‑Aware Placement</div>
+  </header>
+  <div class="tabs">
+    <div class="tab active" data-tab="topology">Topologie</div>
+    <div class="tab" data-tab="results">Résultats</div>
+    <div class="tab" data-tab="code">Code de placement</div>
+  </div>
+
+  <div id="topology-pane" class="tab-pane active">
+    <div class="topo-wrapper">
+      <div id="cy"></div>
+      <div class="legend-panel" id="legend-panel">Chargement...</div>
+    </div>
+  </div>
+
+  <div id="results-pane" class="tab-pane">
+    <div class="metrics" id="metrics"></div>
+    <h3 style="margin: 24px 0 12px 0;">📦 Placement des modules</h3>
+    <div style="overflow-x:auto"><table id="placement-table"><thead><tr><th>Module</th><th>Device</th><th>Niveau</th><th>Énergie device (J)</th></tr></thead><tbody></tbody></table></div>
+    <h3 style="margin: 24px 0 12px 0;">🔋 Consommation énergétique</h3>
+    <div id="energy-grid" class="energy-grid"></div>
+  </div>
+
+  <div id="code-pane" class="tab-pane">
+    <div class="code-block" id="code-block">
+      <pre>Chargement du code source...</pre>
+    </div>
+  </div>
+  <footer>Données issues de simulation_data.json – iFogSim2 / Mini‑projet TCD 2025/2026</footer>
+</div>
+
+<script>
+  let simulationData = null;
+
+  // Charger le fichier JSON généré par iFogSim
+  fetch('simulation_data.json')
+    .then(res => {
+      if (!res.ok) throw new Error('Fichier simulation_data.json introuvable. Exécutez d\'abord la simulation.');
+      return res.json();
+    })
+    .then(data => {
+      simulationData = data;
+      renderTopology(data);
+      renderResults(data);
+      renderCodeSnippet(data);
+    })
+    .catch(err => {
+      document.getElementById('cy').innerHTML = `<div class="error">❌ ${err.message}</div>`;
+      document.getElementById('legend-panel').innerHTML = `<div class="error">Veuillez générer simulation_data.json avec la méthode exportToJson()</div>`;
+    });
+
+  function renderTopology(data) {
+    const { devices, placements } = data;
+    const nodes = [];
+    const edges = [];
+    const devMap = {};
+    devices.forEach(dev => {
+      devMap[dev.id] = dev.name;
+      let color = '#3b82f6';
+      if (dev.level === 0) color = '#3b82f6';      // cloud
+      else if (dev.level === 1) color = '#10b981'; // fog gateway
+      else if (dev.level === 2) color = '#8b5cf6';
+      else color = '#f59e0b';                     // edge
+      nodes.push({
+        data: { id: dev.name, name: dev.name, level: dev.level, energy: dev.energy },
+        style: { 'background-color': color, 'label': dev.name + '\n(L'+dev.level+')' }
+      });
+    });
+    devices.forEach(dev => {
+      if (dev.parentId !== -1 && devMap[dev.parentId]) {
+        edges.push({ data: { source: devMap[dev.parentId], target: dev.name } });
+      }
+    });
+
+    const cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: { nodes, edges },
+      style: [
+        { selector: 'node', style: { 'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center', 'shape': 'roundrectangle', 'padding': '10px', 'font-size': '11px', 'color': '#fff', 'background-opacity': 0.8 } },
+        { selector: 'edge', style: { 'width': 2, 'line-color': '#475569', 'target-arrow-color': '#475569', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier' } }
+      ],
+      layout: { name: 'breadthfirst', directed: true, spacingFactor: 1.8, roots: '[id = "cloud"]', animate: false }
+    });
+
+    // Legend panel
+    let legendHtml = `<h3 style="margin-bottom:16px;">📡 Légende</h3>`;
+    legendHtml += `<div class="legend-item"><div class="legend-color" style="background:#3b82f6"></div><div class="legend-text">Cloud (level 0)</div></div>`;
+    legendHtml += `<div class="legend-item"><div class="legend-color" style="background:#10b981"></div><div class="legend-text">Fog gateway (level 1)</div></div>`;
+    legendHtml += `<div class="legend-item"><div class="legend-color" style="background:#f59e0b"></div><div class="legend-text">Mobile / Edge (level 3)</div></div>`;
+    legendHtml += `<hr style="border-color:#252d48; margin:16px 0;">`;
+    legendHtml += `<div class="detail-row"><span>Baseline latence</span><span>${data.baseline_latency.toFixed(2)} ms</span></div>`;
+    legendHtml += `<div class="detail-row"><span>Latence optimisée</span><span>${data.optimized_latency.toFixed(2)} ms</span></div>`;
+    legendHtml += `<div class="detail-row"><span>Amélioration</span><span style="color:#10b981">${data.gain_percent ? data.gain_percent.toFixed(2) : '-'} %</span></div>`;
+    document.getElementById('legend-panel').innerHTML = legendHtml;
+  }
+
+  function renderResults(data) {
+    const { baseline_latency, optimized_latency, gain_percent, placements, devices } = data;
+    // Metrics cards
+    const gain = gain_percent || ((baseline_latency - optimized_latency)/baseline_latency*100);
+    document.getElementById('metrics').innerHTML = `
+      <div class="metric-card"><div class="metric-label">Latence baseline</div><div class="metric-value">${baseline_latency.toFixed(2)}<span style="font-size:1rem;"> ms</span></div><div class="metric-sub">EdgeWards placement</div></div>
+      <div class="metric-card green"><div class="metric-label">Latence optimisée</div><div class="metric-value">${optimized_latency.toFixed(2)}<span style="font-size:1rem;"> ms</span></div><div class="metric-sub">Q-Learning + heuristique</div><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100, (baseline_latency-optimized_latency)/baseline_latency*100)}%; background:#10b981;"></div></div></div>
+      <div class="metric-card amber"><div class="metric-label">Amélioration</div><div class="metric-value">${gain.toFixed(2)}%</div><div class="metric-sub">réduction de latence</div></div>
+      <div class="metric-card purple"><div class="metric-label">Énergie cloud</div><div class="metric-value">${(devices.find(d=>d.name==='cloud')?.energy / 1000 || 0).toFixed(0)}<span style="font-size:1rem;"> kJ</span></div><div class="metric-sub">vs baseline ~3245 kJ</div></div>
+    `;
+
+    // Placement table
+    const devMap = Object.fromEntries(devices.map(d => [d.id, d]));
+    const tbody = document.getElementById('placement-table').querySelector('tbody');
+    tbody.innerHTML = '';
+    placements.forEach(p => {
+      const dev = devMap[p.device_id];
+      const level = dev ? dev.level : '-';
+      const energy = dev ? dev.energy.toFixed(0) : '-';
+      const row = `<tr><td><code>${p.module}</code></td><td><span class="badge-device ${level===0?'cloud-badge':level===1?'fog-badge':'edge-badge'}">${p.device}</span></td><td>${level}</td><td>${energy} J</td></tr>`;
+      tbody.insertAdjacentHTML('beforeend', row);
+    });
+
+    // Energy grid (top 8 devices)
+    const sortedDevices = [...devices].sort((a,b)=>b.energy - a.energy).slice(0,12);
+    const maxEnergy = Math.max(...devices.map(d=>d.energy));
+    const grid = document.getElementById('energy-grid');
+    grid.innerHTML = '';
+    sortedDevices.forEach(dev => {
+      const percent = (dev.energy / maxEnergy) * 100;
+      grid.innerHTML += `
+        <div class="energy-card">
+          <div class="energy-name">${dev.name}</div>
+          <div class="energy-bar-container"><div class="energy-bar" style="width:${percent}%;">${Math.round(dev.energy)} J</div></div>
+          <div style="font-size:0.7rem; color:#94a3b8;">level ${dev.level}</div>
+        </div>
+      `;
+    });
+  }
+
+  function renderCodeSnippet(data) {
+    const codeBlock = document.getElementById('code-block');
+    const sampleCode = `// ModulePlacementLatencyAware.java – extrait du placement
+@Override
+public void mapModules() {
+    for (AppModule module : getApplication().getModules()) {
+        String name = module.getName();
+        FogDevice chosen = null;
+        if (name.equals("connector")) {
+            chosen = getDeviceByName("cloud");               // niveau 0
+        } else if (name.equals("concentration_calculator")) {
+            chosen = getBestFogNode(module);                // niveau 1 (d-0)
+        } else if (name.equals("client")) {
+            chosen = getFirstAvailableMobile(module);       // niveau 3 (m-0-0)
+        }
+        if (chosen == null) chosen = getCloudDevice();
+        registerPlacement(module, chosen);
+    }
+}
+
+// Résultat obtenu :
+// client    → ${data.placements.find(p=>p.module==='client')?.device || '?'}
+// concentration_calculator → ${data.placements.find(p=>p.module==='concentration_calculator')?.device || '?'}
+// connector → ${data.placements.find(p=>p.module==='connector')?.device || '?'}
+
+// Latence mesurée : ${data.optimized_latency.toFixed(2)} ms
+// Gain : ${((data.baseline_latency - data.optimized_latency)/data.baseline_latency*100).toFixed(2)}%
+`;
+    codeBlock.innerHTML = `<pre style="white-space:pre-wrap; font-family:monospace;">${sampleCode}</pre>`;
+  }
+
+  // Tabs switching
+  const tabs = document.querySelectorAll('.tab');
+  const panes = {
+    topology: document.getElementById('topology-pane'),
+    results: document.getElementById('results-pane'),
+    code: document.getElementById('code-pane')
+  };
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.getAttribute('data-tab');
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      Object.keys(panes).forEach(p => panes[p].classList.remove('active'));
+      panes[target].classList.add('active');
+      if (target === 'topology' && simulationData) setTimeout(() => renderTopology(simulationData), 50);
+    });
+  });
+</script>
+</body>
+</html>

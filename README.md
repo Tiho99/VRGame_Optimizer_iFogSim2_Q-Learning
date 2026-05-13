@@ -13,7 +13,7 @@ src/org/fog/test/perfeval/VRGameFog.java
 src/org/fog/placement/ModulePlacementLatencyAware.java
 3. interface21.html
   
-You can run an HTML interface to view the resulting graphics.
+  You can run an HTML interface to view the resulting graphics.
 
 ## Technologies
 - Java
